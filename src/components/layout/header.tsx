@@ -1,9 +1,8 @@
-
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShieldCheck, Menu, X } from "lucide-react";
+import { ShieldCheck, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -15,16 +14,20 @@ import {
 import { cn } from "@/lib/utils";
 import ConnectWallet from "@/components/connect-wallet";
 import { useState } from "react";
+import { useAccount } from "@reown/appkit";
 
 const navLinks = [
   { href: "/", label: "Markets" },
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/admin", label: "Admin" },
+  { href: "/dashboard", label: "Dashboard", protected: true },
+  { href: "/admin", label: "Admin", protected: true },
 ];
 
 export default function Header() {
   const pathname = usePathname();
+  const { isConnected } = useAccount();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const filteredNavLinks = navLinks.filter(link => !link.protected || isConnected);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -36,7 +39,7 @@ export default function Header() {
           </span>
         </Link>
         <nav className="hidden items-center space-x-6 text-sm font-medium md:flex">
-          {navLinks.map((link) => (
+          {filteredNavLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -73,7 +76,7 @@ export default function Header() {
                   </SheetTitle>
                 </SheetHeader>
                 <div className="mt-8 flex flex-col space-y-4">
-                  {navLinks.map((link) => (
+                  {filteredNavLinks.map((link) => (
                     <Link
                       key={link.href}
                       href={link.href}
