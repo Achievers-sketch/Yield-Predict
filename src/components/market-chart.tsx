@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useState } from "react"
 import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts"
 
 import {
@@ -8,6 +8,8 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import type { Asset } from "@/lib/types"
+import { getChainlinkPriceHistory, PriceDataPoint } from "@/lib/chainlink"
+import { Skeleton } from "./ui/skeleton"
 
 type MarketChartProps = {
   startPrice: number
@@ -15,22 +17,17 @@ type MarketChartProps = {
 }
 
 export default function MarketChart({ startPrice, asset }: MarketChartProps) {
-  const chartData = useMemo(() => {
-    const data = []
-    const days = 30;
-    const volatility = asset === 'ETH' ? 0.05 : 0.0005;
+  const [chartData, setChartData] = useState<PriceDataPoint[]>([]);
+  const [loading, setLoading] = useState(true);
 
-    let price = startPrice
-    for (let i = days; i >= 0; i--) {
-        const date = new Date()
-        date.setDate(date.getDate() - i)
-        price += (Math.random() - 0.5) * price * volatility;
-        data.push({
-            date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            price: parseFloat(price.toFixed(asset === 'ETH' ? 2 : 4)),
-        })
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      const data = await getChainlinkPriceHistory(asset, startPrice);
+      setChartData(data);
+      setLoading(false);
     }
-    return data
+    fetchData();
   }, [startPrice, asset]);
 
   const chartConfig = {
@@ -38,6 +35,14 @@ export default function MarketChart({ startPrice, asset }: MarketChartProps) {
       label: "Price",
       color: "hsl(var(--primary))",
     },
+  }
+
+  if (loading) {
+      return (
+          <div className="h-[300px] w-full flex items-center justify-center">
+              <Skeleton className="h-full w-full" />
+          </div>
+      )
   }
 
   return (
@@ -62,21 +67,34 @@ export default function MarketChart({ startPrice, asset }: MarketChartProps) {
           />
           <YAxis
             domain={['dataMin', 'dataMax']}
-            tickFormatter={(value) => `$${value}`}
+            tickFormatter={(value) => `$${Number(value).toFixed(asset === 'ETH' ? 0 : 4)}`}
             tickLine={false}
             axisLine={false}
             tickMargin={8}
-            width={70}
+            width={80}
           />
           <Tooltip
             cursor={{ strokeDasharray: '3 3' }}
-            content={<ChartTooltipContent indicator="dot" />}
+            content={<ChartTooltipContent indicator="dot" formatter={(value, name, props) => [`$${Number(value).toFixed(asset === 'ETH' ? 2 : 4)}`, 'Price']}/>}
           />
+          <defs>
+            <linearGradient id="fillPrice" x1="0" y1="0" x2="0" y2="1">
+              <stop
+                offset="5%"
+                stopColor="var(--color-price)"
+                stopOpacity={0.8}
+              />
+              <stop
+                offset="95%"
+                stopColor="var(--color-price)"
+                stopOpacity={0.1}
+              />
+            </linearGradient>
+          </defs>
           <Area
             dataKey="price"
             type="natural"
-            fill="var(--color-price)"
-            fillOpacity={0.1}
+            fill="url(#fillPrice)"
             stroke="var(--color-price)"
             stackId="a"
           />
